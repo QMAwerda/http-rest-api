@@ -16,6 +16,7 @@ type APIServer struct {
 }
 
 // New
+// В этом методе мы инициализируем наш api сервер
 func New(config *Config) *APIServer {
 	return &APIServer{
 		config: config,
@@ -25,6 +26,8 @@ func New(config *Config) *APIServer {
 }
 
 // Start
+// С помощью этой функции мы будем запускать http сервер, подключаться к БД и тд.
+// Эта функция может вернуть ошибку (например, если занят порт и тд)
 func (s *APIServer) Start() error {
 	if err := s.configureLogger(); err != nil {
 		return err
