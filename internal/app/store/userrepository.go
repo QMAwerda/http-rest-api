@@ -9,7 +9,16 @@ type UserRepository struct {
 }
 
 func (r *UserRepository) Create(u *model.User) (*model.User, error) {
-	if err := r.store.db.QueryRow(
+	if err := u.Validate(); err != nil { // проверяем данные на валидность, если валидны, запускаем колбек BeforeCreate()
+		return nil, err
+	}
+
+	// Коллбэк — это функция, которая должна быть выполнена после того, как другая функция завершит работу.
+	if err := u.BeforeCreate(); err != nil { // хешируем пароль
+		return nil, err
+	}
+
+	if err := r.store.db.QueryRow( // добавляем пользователя в БД
 		"INSERT INTO users (email, encrypted_password) VALUES ($1, $2) RETURNING id",
 		u.Email,             // подставляемый параметр
 		u.EncryptedPassword, // подставляемый параметр

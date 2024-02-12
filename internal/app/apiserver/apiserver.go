@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/QMAwerda/http-rest-api/store"
+	"github.com/QMAwerda/http-rest-api/internal/app/store"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
