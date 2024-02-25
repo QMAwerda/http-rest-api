@@ -7,14 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUser_BeforeCreate(t *testing.T) { // тестируем хеш функцию
+func TestUser_BeforeCreate(t *testing.T) {
 	u := model.TestUser(t)
-	assert.NoError(t, u.BeforeCreate()) // Кажется, она проверяет только на отстутсвие ошибок
+	assert.NoError(t, u.BeforeCreate())
 	assert.NotEmpty(t, u.EncryptedPassword)
 }
 
 func TestUser_Validate(t *testing.T) {
-	// Тут мы тестируем работу валидатора на тестовых кейсах (отсутсвие поле или некорректное поле)
 	testCases := []struct {
 		name    string
 		u       func() *model.User
@@ -32,7 +31,7 @@ func TestUser_Validate(t *testing.T) {
 			u: func() *model.User {
 				u := model.TestUser(t)
 				u.Password = ""
-				u.EncryptedPassword = "encryptedpassword" // поле не пустое
+				u.EncryptedPassword = "encryptedpassword"
 
 				return u
 			},
@@ -46,7 +45,7 @@ func TestUser_Validate(t *testing.T) {
 
 				return u
 			},
-			isValid: false, // по нашей идее, поле email не может быть пустым
+			isValid: false,
 		},
 		{
 			name: "invalid email",
@@ -56,7 +55,7 @@ func TestUser_Validate(t *testing.T) {
 
 				return u
 			},
-			isValid: false, // по нашей идее, поле email должен содержать именно email, а не что-то другое
+			isValid: false,
 		},
 		{
 			name: "empty password",
@@ -83,9 +82,9 @@ func TestUser_Validate(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.isValid {
-				assert.NoError(t, tc.u().Validate()) // ловим корректное поведение валидатора
+				assert.NoError(t, tc.u().Validate())
 			} else {
-				assert.Error(t, tc.u().Validate()) // ловим ошибку брошенную валидатором
+				assert.Error(t, tc.u().Validate())
 			}
 		})
 	}

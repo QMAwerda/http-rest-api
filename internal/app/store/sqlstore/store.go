@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/QMAwerda/http-rest-api/internal/app/store"
-	_ "github.com/lib/pq" // анонимный импорт, чтобы методы в код не импортировались
+	_ "github.com/lib/pq"
 )
 
 type Store struct {
@@ -18,7 +18,6 @@ func New(db *sql.DB) *Store {
 	}
 }
 
-// store.User().Create() - пример обращения к репозиторию из внешнего мира
 func (s *Store) User() store.UserRepository {
 	if s.UserRepository != nil {
 		return s.UserRepository

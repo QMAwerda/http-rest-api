@@ -13,7 +13,6 @@ func New() *Store {
 	return &Store{}
 }
 
-// store.User().Create() - пример обращения к репозиторию из внешнего мира
 func (s *Store) User() store.UserRepository {
 	if s.UserRepository != nil {
 		return s.UserRepository

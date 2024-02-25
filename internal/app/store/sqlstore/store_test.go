@@ -9,10 +9,8 @@ var (
 	databaseURL string
 )
 
-// Эта фукнкция вызовется один раз перед всеми тестами
 func TestMain(m *testing.M) {
-	// переменная окружения - объект, содержащий текстовую инфу, которую могут использовать запускаемые программы.
-	databaseURL = os.Getenv("DATABASE_URL") // вроде возвращает значение из переменной окружения
+	databaseURL = os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		databaseURL = "host=localhost dbname=restapi_test sslmode=disable user=postgres password=postgres"
 	}
