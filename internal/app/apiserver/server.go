@@ -1,16 +1,23 @@
 package apiserver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/QMAwerda/http-rest-api/internal/app/model"
 	"github.com/QMAwerda/http-rest-api/internal/app/store"
+	"github.com/google/uuid"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 )
+
+//Пример запроса, после активации ./apiserver (в другом терминале)
+// http -v --session=user http://localhost:8080/private/whoami "Origin: google.com"
 
 // Тут будет описана более легковесная версия сервера, она не будет знать про запуск сервера, про запуск http сервера, она будет
 // только уметь обрабатывать входящий запрос и будет реализовывать интерфейс httpHandler, это поможет прокинуть ее напрямую в функцию
@@ -20,12 +27,17 @@ import (
 
 // выносим в константу, чтоб каждый раз не инициализировать
 const (
-	sessionName = "randomName"
+	sessionName        = "randomName"
+	ctxKeyUser  ctxKey = iota
+	ctxKeyRequestID
 )
 
 var (
 	errIncorrectEmailOrPassword = errors.New("incorrect email or password")
+	errNotAuthenticated         = errors.New("not authenticated")
 )
+
+type ctxKey int8 // создаем тип ключа для контекста
 
 type server struct {
 	router       *mux.Router
@@ -52,8 +64,84 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) configureRouter() {
+	s.router.Use(s.setRequestID)
+	s.router.Use(s.logRequest)
+	//AllowedOrigins разрешает доступ с определенных источников, а "*" показывает, что разрешает с любых доменов
+	//Теперь мы сможем отправлять запросы к нашему серверу из браузера
+	s.router.Use(handlers.CORS(handlers.AllowedOrigins([]string{"*"})))
+
 	s.router.HandleFunc("/users", s.handleUsersCreate()).Methods("POST") // создаем эндпоинт для регистрации пользователей
 	s.router.HandleFunc("/sessions", s.handleSessionsCreate()).Methods("POST")
+
+	// выделим подроутер, запросы на эти middleware будут доступны так:
+	// /private/... (роутеры выше не прикрыты middleware и они доступны для гостей и любых запросов)
+	private := s.router.PathPrefix("/private").Subrouter()
+	private.Use(s.authenticateUser)
+	private.HandleFunc("/whoami", s.handleWhoami()).Methods("GET")
+}
+
+func (s *server) setRequestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := uuid.New().String()
+		w.Header().Set("X-Request-ID", id)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKeyRequestID, id)))
+	})
+}
+
+func (s *server) logRequest(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// локальный логгер с параметрами характерными только для конктерного запроса
+		logger := s.logger.WithFields(logrus.Fields{
+			"remote_addr": r.RemoteAddr,
+			"request_id":  r.Context().Value(ctxKeyRequestID),
+		})
+		// started Get /endpoint...
+		logger.Infof("started %s %s", r.Method, r.RequestURI)
+
+		start := time.Now()
+		rw := &responseWriter{w, http.StatusOK}
+		next.ServeHTTP(rw, r)
+
+		logger.Infof(
+			"completed with %d %s in %v", // статус код, его текстовое представление in время
+			rw.code,
+			http.StatusText(rw.code),
+			time.Since(start),
+		)
+	})
+}
+
+func (s *server) authenticateUser(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// получим название сессии
+		session, err := s.sessionStore.Get(r, sessionName)
+		if err != nil {
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		id, ok := session.Values["user_id"]
+		if !ok { // если в нашей сессии нет айди пользователя
+			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			return
+		}
+		// если айди все таки есть, но пользователь не найден
+		u, err := s.store.User().Find(id.(int))
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			return
+		}
+		// чтобы не создавать каждый раз пользователя, мы можем использовать контекст, в котором передадим пользователя
+		// также контекст используется для распространения информации о том, что какое-то действие можно завершать
+		// context.WithValue(родительский контекст, ключ куда запишем значение)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKeyUser, u)))
+	})
+}
+
+func (s *server) handleWhoami() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.respond(w, r, http.StatusOK, r.Context().Value(ctxKeyUser).(*model.User))
+	}
 }
 
 // Пример запроса на добавление: http POST http://localhost:8080/users email=user@example.org password=password
