@@ -15,6 +15,9 @@ require (
 require (
 	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/felixge/httpsnoop v1.0.3 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/gorilla/sessions v1.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

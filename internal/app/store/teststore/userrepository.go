@@ -10,7 +10,7 @@ import (
 
 type UserRepository struct {
 	store *Store
-	users map[string]*model.User // ключом будет почта, а значением - указатель на пользователя
+	users map[int]*model.User // ключом будет почта, а значением - указатель на пользователя
 }
 
 func (r *UserRepository) Create(u *model.User) error {
@@ -22,14 +22,24 @@ func (r *UserRepository) Create(u *model.User) error {
 		return err
 	}
 
-	r.users[u.Email] = u // добавляем пользователя по почте
 	u.ID = len(r.users)
+	r.users[u.ID] = u // добавляем пользователя по id
 
 	return nil
 }
 
 func (r *UserRepository) FindByEmail(email string) (*model.User, error) {
-	u, ok := r.users[email]
+	for _, u := range r.users {
+		if u.Email == email {
+			return u, nil
+		}
+	}
+
+	return nil, store.ErrRecordNotFound
+}
+
+func (r *UserRepository) Find(id int) (*model.User, error) {
+	u, ok := r.users[id]
 	if !ok {
 		return nil, store.ErrRecordNotFound
 	}
