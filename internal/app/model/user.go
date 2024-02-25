@@ -7,11 +7,14 @@ import (
 )
 
 // the model has the same database fields
+
+// Важно добавить теги, для корректного рендеренга в json
 type User struct {
-	ID                int
-	Email             string
-	Password          string // сюда будет вводиться пароль от ползователя в открытом виде
-	EncryptedPassword string
+	ID    int    `json:"id"`
+	Email string `json:"email"`
+	// сюда будет вводиться пароль от ползователя в открытом виде
+	Password          string `json:"password,omitempty"` // если пароль пустой, то в json он не попадет
+	EncryptedPassword string `json:"-"`
 }
 
 func (u *User) Validate() error {
@@ -38,6 +41,17 @@ func (u *User) BeforeCreate() error {
 	}
 
 	return nil
+}
+
+// Функция будет затирать пароль, чтобы скрыть приватные данные
+func (u *User) Sanitize() {
+	u.Password = ""
+	// за счет omitempty в ответе пароля не будет
+}
+
+// Сравниваем пароль (имеющийся в хеше с текущим)
+func (u *User) ComparePassword(password string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(u.EncryptedPassword), []byte(password)) == nil
 }
 
 func encryptedString(s string) (string, error) {
