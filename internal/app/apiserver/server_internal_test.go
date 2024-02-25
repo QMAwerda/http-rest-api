@@ -42,17 +42,16 @@ func TestServer_AuthenticateUser(t *testing.T) {
 	secretKey := []byte("secret")
 	s := newServer(store, sessions.NewCookieStore(secretKey))
 	sc := securecookie.New(secretKey, nil)
-	// добавим фейковый хендлер, который будет удовлетворять интерфейсу http.Handler
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// этот обработчик ничего не делает
 		w.WriteHeader(http.StatusOK)
 	})
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			req, _ := http.NewRequest(http.MethodGet, "/", nil)    // метод, url, body
-			cookieStr, _ := sc.Encode(sessionName, tc.cookieValue) // создадим куки сессии
+			req, _ := http.NewRequest(http.MethodGet, "/", nil)
+			cookieStr, _ := sc.Encode(sessionName, tc.cookieValue)
 			req.Header.Set("Cookie", fmt.Sprintf("%s=%s", sessionName, cookieStr))
 			s.authenticateUser(handler).ServeHTTP(rec, req)
 			assert.Equal(t, tc.expectedCode, rec.Code)
@@ -60,7 +59,6 @@ func TestServer_AuthenticateUser(t *testing.T) {
 	}
 }
 
-// Тестируем тут регистрацию пользователя
 func TestServer_HandleUsersCreate(t *testing.T) {
 	s := newServer(teststore.New(), sessions.NewCookieStore([]byte("secret_key")))
 	testCases := []struct {
@@ -77,7 +75,6 @@ func TestServer_HandleUsersCreate(t *testing.T) {
 			expectedCode: http.StatusCreated,
 		},
 		{
-			// тут вернется BadRequest, не сможем декодировать payload
 			name:         "invalid payload",
 			payload:      "invalid",
 			expectedCode: http.StatusBadRequest,
@@ -95,10 +92,9 @@ func TestServer_HandleUsersCreate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			b := &bytes.Buffer{}
-			json.NewEncoder(b).Encode(tc.payload) // закодируем payload в буфер байт
+			json.NewEncoder(b).Encode(tc.payload)
 			req, _ := http.NewRequest(http.MethodPost, "/users", b)
 			s.ServeHTTP(rec, req)
-			// проверим, что ожидаемый код равен тому, что вернул рекордер
 			assert.Equal(t, tc.expectedCode, rec.Code)
 		})
 	}
@@ -108,7 +104,7 @@ func TestServer_HandleSessionsCreate(t *testing.T) {
 	u := model.TestUser(t)
 	store := teststore.New()
 	store.User().Create(u)
-	s := newServer(store, sessions.NewCookieStore([]byte("secret_key"))) // передадим хранилище, где store мы инициализировали и сохранили там пользователя
+	s := newServer(store, sessions.NewCookieStore([]byte("secret_key")))
 	testCases := []struct {
 		name         string
 		payload      interface{}

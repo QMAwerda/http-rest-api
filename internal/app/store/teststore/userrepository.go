@@ -1,8 +1,5 @@
 package teststore
 
-// Для локальных тестов было решено взять хеш мапу, которая эмулирует поведение базы данных.
-// Хотя вообще это странно, мне кажется, стоит локально запускать у себя бд.
-
 import (
 	"github.com/QMAwerda/http-rest-api/internal/app/model"
 	"github.com/QMAwerda/http-rest-api/internal/app/store"
@@ -10,20 +7,20 @@ import (
 
 type UserRepository struct {
 	store *Store
-	users map[int]*model.User // ключом будет почта, а значением - указатель на пользователя
+	users map[int]*model.User
 }
 
 func (r *UserRepository) Create(u *model.User) error {
-	if err := u.Validate(); err != nil { // проверяем данные на валидность, если валидны, запускаем колбек BeforeCreate()
+	if err := u.Validate(); err != nil {
 		return err
 	}
 
-	if err := u.BeforeCreate(); err != nil { // хешируем пароль
+	if err := u.BeforeCreate(); err != nil {
 		return err
 	}
 
 	u.ID = len(r.users)
-	r.users[u.ID] = u // добавляем пользователя по id
+	r.users[u.ID] = u
 
 	return nil
 }
